@@ -50,4 +50,16 @@ public class Book {
         return categoryEntities.stream().map(Category::getCategory).collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
+    public void addCategory(String name) {
+        if (categoryEntities.stream().noneMatch(c -> c.getCategory().equals(name))) {
+            Category category = new Category();
+            category.setCategory(name);
+            category.setBook(this);
+            categoryEntities.add(category);
+        }
+    }
+
+    public void removeCategory(String name) {
+        categoryEntities.removeIf(c -> c.getCategory().equals(name));
+    }
 }
