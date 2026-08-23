@@ -3,8 +3,10 @@ package com.adventurebook.api.controller;
 import com.adventurebook.api.dto.AddCategoryRequest;
 import com.adventurebook.api.dto.BookDetailResponse;
 import com.adventurebook.api.dto.BookSearchResponse;
+import com.adventurebook.api.dto.SectionResponse;
 import com.adventurebook.api.model.Difficulty;
 import com.adventurebook.api.service.BookService;
+import com.adventurebook.api.service.SectionService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,9 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class BookController {
 
     private final BookService bookService;
+    private final SectionService sectionService;
 
-    public BookController(BookService bookService) {
+    public BookController(BookService bookService, SectionService sectionService) {
         this.bookService = bookService;
+        this.sectionService = sectionService;
     }
 
     @GetMapping
@@ -51,5 +55,10 @@ public class BookController {
     @DeleteMapping("/{bookId}/categories/{category}")
     public BookDetailResponse removeCategory(@PathVariable Long bookId, @PathVariable String category) {
         return bookService.removeCategory(bookId, category);
+    }
+
+    @GetMapping("/{bookId}/sections/{sectionNumber}")
+    public SectionResponse getSection(@PathVariable Long bookId, @PathVariable Integer sectionNumber) {
+        return sectionService.getSection(bookId, sectionNumber);
     }
 }

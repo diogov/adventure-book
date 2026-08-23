@@ -2,11 +2,13 @@ package com.adventurebook.api.repository;
 
 import com.adventurebook.api.model.Book;
 import com.adventurebook.api.model.Difficulty;
+import com.adventurebook.api.model.SectionType;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
@@ -58,5 +60,17 @@ public class BookRepository extends SimpleJpaRepository<Book, Long> {
         params.forEach(countQuery::setParameter);
 
         return PageableExecutionUtils.getPage(results, pageable, countQuery::getSingleResult);
+    }
+
+    public Optional<BookWithBeginningSection> findByIdWithBeginningSection(Long bookId) {
+        TypedQuery<Object[]> query = entityManager.createQuery(
+                "SELECT b, s.sectionNumber FROM Book b LEFT JOIN Section s ON s.book = b AND s.type = :beginType"
+                        + " WHERE b.id = :bookId",
+                Object[].class);
+        query.setParameter("bookId", bookId);
+        query.setParameter("beginType", SectionType.BEGIN);
+        return query.getResultStream()
+                .findFirst()
+                .map(row -> new BookWithBeginningSection((Book) row[0], (Integer) row[1]));
     }
 }

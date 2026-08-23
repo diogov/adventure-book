@@ -10,10 +10,12 @@ import com.adventurebook.api.dto.BookSearchResponse;
 import com.adventurebook.api.model.Book;
 import com.adventurebook.api.model.Difficulty;
 import com.adventurebook.api.repository.BookRepository;
+import com.adventurebook.api.repository.BookWithBeginningSection;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -28,9 +30,10 @@ class BookServiceTest {
 
     @Mock private BookRepository bookRepository;
 
+    @InjectMocks private BookService bookService;
+
     @Test
     void search_repositoryReturnsBooks_mapsToSearchResponses() {
-        BookService bookService = new BookService(bookRepository);
         Book book = new Book();
         book.setId(1L);
         book.setTitle("The Crystal Caverns");
@@ -53,7 +56,6 @@ class BookServiceTest {
 
     @Test
     void search_withFilters_passesFiltersToRepository() {
-        BookService bookService = new BookService(bookRepository);
         Pageable pageable = PageRequest.of(0, 20);
 
         when(bookRepository.search("title", "author", "category", Difficulty.HARD, pageable))
@@ -66,24 +68,24 @@ class BookServiceTest {
 
     @Test
     void getById_bookExists_returnsDetailResponse() {
-        BookService bookService = new BookService(bookRepository);
         Book book = new Book();
         book.setId(1L);
         book.setTitle("The Crystal Caverns");
         book.setAuthor("Evelyn Stomrrider");
         book.setDifficulty(Difficulty.EASY);
-        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(bookRepository.findByIdWithBeginningSection(1L))
+                .thenReturn(Optional.of(new BookWithBeginningSection(book, 1)));
 
         BookDetailResponse response = bookService.getById(1L);
 
         assertThat(response.id()).isEqualTo(1L);
         assertThat(response.title()).isEqualTo("The Crystal Caverns");
+        assertThat(response.beginningSectionNumber()).isEqualTo(1);
     }
 
     @Test
     void getById_bookDoesNotExist_throwsNotFound() {
-        BookService bookService = new BookService(bookRepository);
-        when(bookRepository.findById(1L)).thenReturn(Optional.empty());
+        when(bookRepository.findByIdWithBeginningSection(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> bookService.getById(1L))
                 .isInstanceOf(ResponseStatusException.class)
@@ -93,7 +95,6 @@ class BookServiceTest {
 
     @Test
     void addCategory_bookExists_addsCategoryAndReturnsDetailResponse() {
-        BookService bookService = new BookService(bookRepository);
         Book book = new Book();
         book.setId(1L);
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
@@ -106,7 +107,6 @@ class BookServiceTest {
 
     @Test
     void addCategory_bookDoesNotExist_throwsNotFound() {
-        BookService bookService = new BookService(bookRepository);
         when(bookRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> bookService.addCategory(1L, "horror")).isInstanceOf(ResponseStatusException.class);
@@ -114,7 +114,6 @@ class BookServiceTest {
 
     @Test
     void removeCategory_bookExists_removesCategoryAndReturnsDetailResponse() {
-        BookService bookService = new BookService(bookRepository);
         Book book = new Book();
         book.setId(1L);
         book.addCategory("HORROR");
@@ -128,7 +127,6 @@ class BookServiceTest {
 
     @Test
     void removeCategory_bookDoesNotExist_throwsNotFound() {
-        BookService bookService = new BookService(bookRepository);
         when(bookRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> bookService.removeCategory(1L, "horror")).isInstanceOf(ResponseStatusException.class);
