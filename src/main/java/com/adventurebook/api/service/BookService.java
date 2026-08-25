@@ -21,11 +21,13 @@ public class BookService {
 
     private final BookRepository bookRepository;
 
+    @Transactional(readOnly = true)
     public Page<BookSearchResponse> search(
             String title, String author, String category, Difficulty difficulty, Pageable pageable) {
         return bookRepository.search(title, author, category, difficulty, pageable).map(BookSearchResponse::from);
     }
 
+    @Transactional(readOnly = true)
     public BookDetailResponse getById(Long bookId) {
         BookWithBeginningSection result = bookRepository
                 .findByIdWithBeginningSection(bookId)

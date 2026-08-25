@@ -2,6 +2,8 @@ package com.adventurebook.api.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -33,4 +35,14 @@ public class Option {
 
     @Column(name = "next_section_number", nullable = false)
     private Integer nextSectionNumber;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "consequence_type")
+    private ConsequenceType consequenceType;
+
+    @Column(name = "consequence_value")
+    private Integer consequenceValue;
+
+    @Column(name = "consequence_text")
+    private String consequenceText;
 }

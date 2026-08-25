@@ -3,6 +3,8 @@ package com.adventurebook.api.controller;
 import com.adventurebook.api.dto.AddCategoryRequest;
 import com.adventurebook.api.dto.BookDetailResponse;
 import com.adventurebook.api.dto.BookSearchResponse;
+import com.adventurebook.api.dto.DecisionOptionRequest;
+import com.adventurebook.api.dto.DecisionOptionResponse;
 import com.adventurebook.api.dto.SectionResponse;
 import com.adventurebook.api.model.Difficulty;
 import com.adventurebook.api.service.BookService;
@@ -60,5 +62,14 @@ public class BookController {
     @GetMapping("/{bookId}/sections/{sectionNumber}")
     public SectionResponse getSection(@PathVariable Long bookId, @PathVariable Integer sectionNumber) {
         return sectionService.getSection(bookId, sectionNumber);
+    }
+
+    @GetMapping("/{bookId}/sections/{sectionNumber}/decision")
+    public DecisionOptionResponse decision(
+            @PathVariable Long bookId,
+            @PathVariable Integer sectionNumber,
+            @RequestParam Long optionId,
+            @RequestParam Integer currentHealth) {
+        return sectionService.decision(bookId, sectionNumber, new DecisionOptionRequest(optionId, currentHealth));
     }
 }
