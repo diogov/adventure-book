@@ -42,6 +42,9 @@ public class Book {
     @Column(nullable = false)
     private Difficulty difficulty;
 
+    @Column(name = "is_valid", nullable = false)
+    private boolean valid;
+
     @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @BatchSize(size = 50)
     private List<Category> categoryEntities = new ArrayList<>();

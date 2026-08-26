@@ -25,7 +25,7 @@ class BookRepositoryTest {
         seed("The Crystal Caverns", "Evelyn Stormrider", Difficulty.EASY, "ADVENTURE");
         seed("Pirates of the Jade Sea", "Marina Blackwood", Difficulty.MEDIUM, "ADVENTURE");
 
-        Page<Book> result = bookRepository.search("crystal", null, null, null, PageRequest.of(0, 20));
+        Page<Book> result = bookRepository.search("crystal", null, null, null, null, PageRequest.of(0, 20));
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().getFirst().getTitle()).isEqualTo("The Crystal Caverns");
@@ -35,7 +35,7 @@ class BookRepositoryTest {
     void search_authorFilter_returnsMatchingBook() {
         seed("The Prisoner", "Daniel El Fuego", Difficulty.HARD, "HORROR");
 
-        Page<Book> result = bookRepository.search(null, "el fuego", null, null, PageRequest.of(0, 20));
+        Page<Book> result = bookRepository.search(null, "el fuego", null, null, null, PageRequest.of(0, 20));
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().getFirst().getAuthor()).isEqualTo("Daniel El Fuego");
@@ -46,7 +46,7 @@ class BookRepositoryTest {
         seed("The Crystal Caverns", "Evelyn Stormrider", Difficulty.MEDIUM, "HORROR", "MYSTERY");
         seed("Pirates of the Jade Sea", "Marina Blackwood", Difficulty.EASY, "FICTION");
 
-        Page<Book> result = bookRepository.search(null, null, "mystery", null, PageRequest.of(0, 20));
+        Page<Book> result = bookRepository.search(null, null, "mystery", null, null, PageRequest.of(0, 20));
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().getFirst().getTitle()).isEqualTo("The Crystal Caverns");
@@ -57,7 +57,7 @@ class BookRepositoryTest {
         seed("The Crystal Caverns", "Evelyn Stormrider", Difficulty.EASY);
         seed("Pirates of the Jade Sea", "Marina Blackwood", Difficulty.HARD);
 
-        Page<Book> result = bookRepository.search(null, null, null, Difficulty.HARD, PageRequest.of(0, 20));
+        Page<Book> result = bookRepository.search(null, null, null, Difficulty.HARD, null, PageRequest.of(0, 20));
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getTitle()).isEqualTo("Pirates of the Jade Sea");
@@ -67,13 +67,26 @@ class BookRepositoryTest {
     void search_noFilters_returnsAllBooks() {
         seed("The Crystal Caverns", "Evelyn Stormrider", Difficulty.EASY);
         seed("Pirates of the Jade Sea", "Marina Blackwood", Difficulty.HARD);
+        seed("The Prisoner", "Daniel El Fuego", Difficulty.HARD).setValid(true);
 
-        Page<Book> result = bookRepository.search(null, null, null, null, PageRequest.of(0, 20));
+        Page<Book> result = bookRepository.search(null, null, null, null, null, PageRequest.of(0, 20));
 
-        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent()).hasSize(3);
     }
 
-    private void seed(String title, String author, Difficulty difficulty, String... categories) {
+    @Test
+    void search_validFilter_returnsOnlyValidBooks() {
+        seed("The Crystal Caverns", "Evelyn Stormrider", Difficulty.EASY).setValid(true);
+        seed("Pirates of the Jade Sea", "Marina Blackwood", Difficulty.HARD);
+
+        Page<Book> validOnly = bookRepository.search(null, null, null, null, true, PageRequest.of(0, 20));
+        Page<Book> invalidOnly = bookRepository.search(null, null, null, null, false, PageRequest.of(0, 20));
+
+        assertThat(validOnly.getContent()).extracting(Book::getTitle).containsExactly("The Crystal Caverns");
+        assertThat(invalidOnly.getContent()).extracting(Book::getTitle).containsExactly("Pirates of the Jade Sea");
+    }
+
+    private Book seed(String title, String author, Difficulty difficulty, String... categories) {
         Book book = new Book();
         book.setTitle(title);
         book.setAuthor(author);
@@ -84,6 +97,6 @@ class BookRepositoryTest {
             category.setBook(book);
             book.getCategoryEntities().add(category);
         }
-        bookRepository.save(book);
+        return bookRepository.save(book);
     }
 }

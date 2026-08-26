@@ -2,17 +2,25 @@ package com.adventurebook.api.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.adventurebook.api.dto.BookDetailResponse;
 import com.adventurebook.api.dto.BookSearchResponse;
+import com.adventurebook.api.dto.CreateBookRequest;
+import com.adventurebook.api.dto.ValidateBookResponse;
 import com.adventurebook.api.model.Book;
 import com.adventurebook.api.model.Difficulty;
+import com.adventurebook.api.model.Option;
+import com.adventurebook.api.model.Section;
+import com.adventurebook.api.model.SectionType;
 import com.adventurebook.api.repository.BookRepository;
 import com.adventurebook.api.repository.BookWithBeginningSection;
+import com.adventurebook.api.repository.SectionRepository;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,6 +37,7 @@ import org.springframework.web.server.ResponseStatusException;
 class BookServiceTest {
 
     @Mock private BookRepository bookRepository;
+    @Mock private SectionRepository sectionRepository;
 
     @InjectMocks private BookService bookService;
 
@@ -41,10 +50,10 @@ class BookServiceTest {
         book.setDifficulty(Difficulty.EASY);
         Pageable pageable = PageRequest.of(0, 20);
 
-        when(bookRepository.search("crystal", null, null, null, pageable))
+        when(bookRepository.search("crystal", null, null, null, null, pageable))
                 .thenReturn(new PageImpl<>(List.of(book), pageable, 1));
 
-        Page<BookSearchResponse> result = bookService.search("crystal", null, null, null, pageable);
+        Page<BookSearchResponse> result = bookService.search("crystal", null, null, null, null, pageable);
 
         assertThat(result.getContent()).hasSize(1);
         BookSearchResponse response = result.getContent().get(0);
@@ -58,12 +67,12 @@ class BookServiceTest {
     void search_withFilters_passesFiltersToRepository() {
         Pageable pageable = PageRequest.of(0, 20);
 
-        when(bookRepository.search("title", "author", "category", Difficulty.HARD, pageable))
+        when(bookRepository.search("title", "author", "category", Difficulty.HARD, true, pageable))
                 .thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
-        bookService.search("title", "author", "category", Difficulty.HARD, pageable);
+        bookService.search("title", "author", "category", Difficulty.HARD, true, pageable);
 
-        verify(bookRepository).search("title", "author", "category", Difficulty.HARD, pageable);
+        verify(bookRepository).search("title", "author", "category", Difficulty.HARD, true, pageable);
     }
 
     @Test
@@ -130,5 +139,127 @@ class BookServiceTest {
         when(bookRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> bookService.removeCategory(1L, "horror")).isInstanceOf(ResponseStatusException.class);
+    }
+
+    @Test
+    void createBook_savesBookWithUppercasedCategories() {
+        BookDetailResponse response =
+                bookService.createBook(new CreateBookRequest("The Crystal Caverns", "Evelyn Stormrider", Difficulty.EASY, Set.of("horror")));
+
+        assertThat(response.title()).isEqualTo("The Crystal Caverns");
+        assertThat(response.categories()).containsExactly("HORROR");
+        assertThat(response.valid()).isFalse();
+        verify(bookRepository).save(any(Book.class));
+    }
+
+    @Test
+    void validate_bookHasSingleBeginningAndEndingAndValidLinks_marksValidTrue() {
+        Book book = new Book();
+        book.setId(1L);
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+
+        Section beginning = section(1, "Start", SectionType.BEGIN);
+        Section ending = section(2, "The End", SectionType.END);
+        beginning.getOptions().add(option(beginning, "Go on", 2));
+        when(sectionRepository.findByBookId(1L)).thenReturn(List.of(beginning, ending));
+
+        ValidateBookResponse response = bookService.validate(1L);
+
+        assertThat(response.valid()).isTrue();
+        assertThat(book.isValid()).isTrue();
+    }
+
+    @Test
+    void validate_bookHasIntermediateNodeSection_marksValidTrue() {
+        Book book = new Book();
+        book.setId(1L);
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+
+        Section beginning = section(1, "Start", SectionType.BEGIN);
+        Section node = section(2, "Middle", SectionType.NODE);
+        Section ending = section(3, "The End", SectionType.END);
+        beginning.getOptions().add(option(beginning, "Go to the middle", 2));
+        node.getOptions().add(option(node, "Go to the end", 3));
+        when(sectionRepository.findByBookId(1L)).thenReturn(List.of(beginning, node, ending));
+
+        ValidateBookResponse response = bookService.validate(1L);
+
+        assertThat(response.valid()).isTrue();
+    }
+
+    @Test
+    void validate_bookHasNoBeginning_marksValidFalse() {
+        Book book = new Book();
+        book.setId(1L);
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+
+        Section ending = section(1, "The End", SectionType.END);
+        when(sectionRepository.findByBookId(1L)).thenReturn(List.of(ending));
+
+        ValidateBookResponse response = bookService.validate(1L);
+
+        assertThat(response.valid()).isFalse();
+    }
+
+    @Test
+    void validate_bookHasNoEnding_marksValidFalse() {
+        Book book = new Book();
+        book.setId(1L);
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+
+        Section beginning = section(1, "Start", SectionType.BEGIN);
+        beginning.getOptions().add(option(beginning, "Go on", 1));
+        when(sectionRepository.findByBookId(1L)).thenReturn(List.of(beginning));
+
+        ValidateBookResponse response = bookService.validate(1L);
+
+        assertThat(response.valid()).isFalse();
+    }
+
+    @Test
+    void validate_optionPointsToNonExistentSection_marksValidFalse() {
+        Book book = new Book();
+        book.setId(1L);
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+
+        Section beginning = section(1, "Start", SectionType.BEGIN);
+        Section ending = section(2, "The End", SectionType.END);
+        beginning.getOptions().add(option(beginning, "Go on", 99));
+        when(sectionRepository.findByBookId(1L)).thenReturn(List.of(beginning, ending));
+
+        ValidateBookResponse response = bookService.validate(1L);
+
+        assertThat(response.valid()).isFalse();
+    }
+
+    @Test
+    void validate_nonEndingSectionHasNoOptions_marksValidFalse() {
+        Book book = new Book();
+        book.setId(1L);
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+
+        Section beginning = section(1, "Start", SectionType.BEGIN);
+        Section ending = section(2, "The End", SectionType.END);
+        when(sectionRepository.findByBookId(1L)).thenReturn(List.of(beginning, ending));
+
+        ValidateBookResponse response = bookService.validate(1L);
+
+        assertThat(response.valid()).isFalse();
+    }
+
+    private Section section(int sectionNumber, String text, SectionType type) {
+        Section section = new Section();
+        section.setSectionNumber(sectionNumber);
+        section.setText(text);
+        section.setType(type);
+        return section;
+    }
+
+    private Option option(Section section, String description, int nextSectionNumber) {
+        Option option = new Option();
+        option.setSection(section);
+        option.setDescription(description);
+        option.setNextSectionNumber(nextSectionNumber);
+        return option;
     }
 }

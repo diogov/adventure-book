@@ -26,7 +26,8 @@ public class BookRepository extends SimpleJpaRepository<Book, Long> {
         this.entityManager = entityManager;
     }
 
-    public Page<Book> search(String title, String author, String category, Difficulty difficulty, Pageable pageable) {
+    public Page<Book> search(
+            String title, String author, String category, Difficulty difficulty, Boolean valid, Pageable pageable) {
         StringBuilder jpql = new StringBuilder("FROM Book b LEFT JOIN b.categoryEntities c WHERE 1 = 1");
         Map<String, Object> params = new HashMap<>();
 
@@ -45,6 +46,10 @@ public class BookRepository extends SimpleJpaRepository<Book, Long> {
         if (difficulty != null) {
             jpql.append(" AND b.difficulty = :difficulty");
             params.put("difficulty", difficulty);
+        }
+        if (valid != null) {
+            jpql.append(" AND b.valid = :valid");
+            params.put("valid", valid);
         }
 
         String baseJpql = jpql.toString();

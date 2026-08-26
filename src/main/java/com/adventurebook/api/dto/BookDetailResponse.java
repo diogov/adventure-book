@@ -10,7 +10,8 @@ public record BookDetailResponse(
         String author,
         Difficulty difficulty,
         Set<String> categories,
-        Integer beginningSectionNumber) {
+        Integer beginningSectionNumber,
+        boolean valid) {
 
     public static BookDetailResponse from(Book book, Integer beginningSectionNumber) {
         return new BookDetailResponse(
@@ -19,6 +20,7 @@ public record BookDetailResponse(
                 book.getAuthor(),
                 book.getDifficulty(),
                 book.getCategories(),
-                beginningSectionNumber);
+                beginningSectionNumber,
+                book.isValid());
     }
 }

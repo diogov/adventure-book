@@ -58,4 +58,26 @@ class SectionRepositoryTest {
 
         assertThat(result).isEmpty();
     }
+
+    @Test
+    void existsOtherBeginningSection_anotherBeginningSectionExists_returnsTrue() {
+        Book book = new Book();
+        book.setTitle("The Crystal Caverns");
+        book.setAuthor("Evelyn Stormrider");
+        book.setDifficulty(Difficulty.EASY);
+        bookRepository.save(book);
+
+        Section beginning = new Section();
+        beginning.setBook(book);
+        beginning.setSectionNumber(1);
+        beginning.setText("You stand at the entrance.");
+        beginning.setType(SectionType.BEGIN);
+        sectionRepository.save(beginning);
+
+        boolean existsForOtherSection = sectionRepository.existsOtherBeginningSection(book.getId(), 2);
+        boolean existsForSameSection = sectionRepository.existsOtherBeginningSection(book.getId(), 1);
+
+        assertThat(existsForOtherSection).isTrue();
+        assertThat(existsForSameSection).isFalse();
+    }
 }

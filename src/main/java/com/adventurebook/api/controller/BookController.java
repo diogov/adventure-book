@@ -3,9 +3,12 @@ package com.adventurebook.api.controller;
 import com.adventurebook.api.dto.AddCategoryRequest;
 import com.adventurebook.api.dto.BookDetailResponse;
 import com.adventurebook.api.dto.BookSearchResponse;
+import com.adventurebook.api.dto.CreateBookRequest;
 import com.adventurebook.api.dto.DecisionOptionRequest;
 import com.adventurebook.api.dto.DecisionOptionResponse;
+import com.adventurebook.api.dto.SaveSectionRequest;
 import com.adventurebook.api.dto.SectionResponse;
+import com.adventurebook.api.dto.ValidateBookResponse;
 import com.adventurebook.api.model.Difficulty;
 import com.adventurebook.api.service.BookService;
 import com.adventurebook.api.service.SectionService;
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -40,13 +44,24 @@ public class BookController {
             @RequestParam(required = false) String author,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) Difficulty difficulty,
+            @RequestParam(required = false) Boolean valid,
             @PageableDefault(size = 20) Pageable pageable) {
-        return bookService.search(title, author, category, difficulty, pageable);
+        return bookService.search(title, author, category, difficulty, valid, pageable);
+    }
+
+    @PostMapping
+    public BookDetailResponse createBook(@Valid @RequestBody CreateBookRequest request) {
+        return bookService.createBook(request);
     }
 
     @GetMapping("/{bookId}")
     public BookDetailResponse getById(@PathVariable Long bookId) {
         return bookService.getById(bookId);
+    }
+
+    @PostMapping("/{bookId}/validate")
+    public ValidateBookResponse validate(@PathVariable Long bookId) {
+        return bookService.validate(bookId);
     }
 
     @PostMapping("/{bookId}/categories")
@@ -62,6 +77,12 @@ public class BookController {
     @GetMapping("/{bookId}/sections/{sectionNumber}")
     public SectionResponse getSection(@PathVariable Long bookId, @PathVariable Integer sectionNumber) {
         return sectionService.getSection(bookId, sectionNumber);
+    }
+
+    @PutMapping("/{bookId}/sections/{sectionNumber}")
+    public SectionResponse saveSection(
+            @PathVariable Long bookId, @PathVariable Integer sectionNumber, @Valid @RequestBody SaveSectionRequest request) {
+        return sectionService.saveSection(bookId, sectionNumber, request);
     }
 
     @GetMapping("/{bookId}/sections/{sectionNumber}/decision")
